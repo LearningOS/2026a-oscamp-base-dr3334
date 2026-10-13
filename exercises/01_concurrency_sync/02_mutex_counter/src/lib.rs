@@ -20,20 +20,59 @@ pub fn concurrent_counter(n_threads: usize, count_per_thread: usize) -> usize {
     // TODO: Spawn n_threads threads
     // TODO: In each thread, lock() and increment count_per_thread times
     // TODO: Join all threads, return final value
-    todo!()
-}
+    let counter = Arc::new(Mutex::new(0usize));
+  
+     let mut handles = Vec::new();
+    for _ in 0..n_threads{
+        let counter = Arc::clone(&counter);
+        let handle=thread::spawn(move ||{
+            for _ in 0..count_per_thread{
+                let mut num=counter.lock().unwrap();
+                *num+=1;
+            }
+           
+        });
+        handles.push(handle);
 
+    }
+       for h in handles {                                 // 循环结束后,统一等待所有线程
+          h.join().unwrap();                             // join 每个子线程
+      }
+        let total = *counter.lock().unwrap();
+        total
+}
+     
+ 
 /// Add elements to a shared vector concurrently using multiple threads.
 /// Each thread pushes its own id (0..n_threads) to the vector.
 /// Returns the sorted vector.
 ///
 /// Hint: Use `Arc<Mutex<Vec<usize>>>`.
-pub fn concurrent_collect(n_threads: usize) -> Vec<usize> {
-    // TODO: Create Arc<Mutex<Vec<usize>>>
-    // TODO: Each thread pushes its own id
-    // TODO: After joining all threads, sort the result and return
-    todo!()
-}
+
+  pub fn concurrent_collect(n_threads: usize) -> Vec<usize> {
+      // ① 共享一个"空的 Vec",用 Arc<Mutex<..>> 包起来
+      let shared = Arc::new(Mutex::new(Vec::new()));     // Arc<Mutex<Vec<usize>>>
+
+      let mut handles = Vec::new();
+      for id in 0..n_threads {                            // ← 用 id,不是 _
+          let shared = Arc::clone(&shared);
+          let handle = thread::spawn(move || {            // move 把 id 和句柄搬进去
+              let mut guard = shared.lock().unwrap();      // 上锁
+              guard.push(id);                          // ② 推什么进去?
+          });
+          handles.push(handle);
+      }
+
+      for h in handles {                                  // 等所有线程
+          h.join().unwrap();
+      }
+
+      let mut result = shared.lock().unwrap();             // ③ 上锁取出
+      result.sort();                                       
+      result.clone()
+                                           // ④ 返回一个 Vec<usize>
+  }
+
 
 #[cfg(test)]
 mod tests {
