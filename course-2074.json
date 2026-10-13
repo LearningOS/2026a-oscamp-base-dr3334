@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2074,
   "repository": "LearningOS/2026a-oscamp-base-dr3334",
-  "commit": "18aa295cb0fbe8f6586741fab3866e1fb1a709c2",
-  "score": 3,
+  "commit": "f31484f88b9ed46e856263ebe50aded2a2d785f5",
+  "score": 7,
   "totalScore": 100,
   "exercises": [
     {
@@ -16,9 +16,9 @@
     {
       "name": "mutex_counter",
       "max": 4,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 101
+      "score": 4,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "channel",
@@ -176,9 +176,9 @@
     }
   ],
   "student": "dr3334",
-  "runId": "38394231817",
+  "runId": "38400744488",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
