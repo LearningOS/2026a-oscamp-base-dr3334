@@ -119,7 +119,25 @@ unsafe impl GlobalAlloc for FreeListAllocator {
         // TODO: Step 2 — no suitable block in free_list, allocate from bump region
         //
         // Same logic as 02_bump_allocator's alloc
-        todo!()
+        let mut prev=null_mut();
+        let mut cur=self.free_list_head();
+        while !cur.is_null(){
+
+            if(cur.size>=size&&(cur as usize)%align==0){
+                if prev.is_null() {
+                    self.set_free_list_head(*(cur)->next);
+                } else{ //非头节点
+                    *(prev).next=cur->bump_next; 
+                    cur->next=null_mut();   
+                }
+                //找到节点
+                return  curr as * mut u8;
+            }
+            prev=cur;
+            cur=cur.next;
+        }
+        //未找到
+        //直接从一个新region分配
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
