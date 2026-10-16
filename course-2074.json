@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2074,
   "repository": "LearningOS/2026a-oscamp-base-dr3334",
-  "commit": "21e50975c3e834cbcc92b015b4f6ebfe51a1edae",
-  "score": 56,
+  "commit": "15b65fa01152c230b62d7d170a1cbb382dd0a6b3",
+  "score": 60,
   "totalScore": 100,
   "exercises": [
     {
@@ -79,9 +79,9 @@
     {
       "name": "atomic_ordering",
       "max": 4,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 101
+      "score": 4,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "spinlock",
@@ -176,9 +176,9 @@
     }
   ],
   "student": "dr3334",
-  "runId": "38867558149",
+  "runId": "38869554507",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
