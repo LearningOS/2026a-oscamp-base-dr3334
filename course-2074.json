@@ -2,7 +2,7 @@
   "schema": 1,
   "courseId": 2074,
   "repository": "LearningOS/2026a-oscamp-base-dr3334",
-  "commit": "15b65fa01152c230b62d7d170a1cbb382dd0a6b3",
+  "commit": "dfa238b058fb92fe18fc77bd28a17c8af3e65cef",
   "score": 60,
   "totalScore": 100,
   "exercises": [
@@ -176,9 +176,9 @@
     }
   ],
   "student": "dr3334",
-  "runId": "38869554507",
+  "runId": "38882306034",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
