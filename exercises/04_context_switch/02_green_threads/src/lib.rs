@@ -1,27 +1,27 @@
-//! # Green Thread Scheduler (riscv64)
+//! # 绿色线程调度器（riscv64）
 //!
-//! In this exercise, you build a simple cooperative (green) thread scheduler on top of context switching.
-//! This crate is **riscv64 only**; run with the repo's normal flow (`./check.sh` / `oscamp`) or natively on riscv64.
+//! 在这个练习中，你将在上下文切换之上搭建一个简单的协作式（绿色）线程调度器。
+//! 本 crate **仅限 riscv64**；用仓库的正常流程（`./check.sh` / `oscamp`）或在 riscv64 上原生运行。
 //!
-//! ## Key Concepts
-//! - Cooperative vs preemptive scheduling
-//! - Thread state: `Ready`, `Running`, `Finished`
-//! - `yield_now()`: current thread voluntarily gives up the CPU
-//! - Scheduler loop: pick next ready thread and switch to it
+//! ## 关键概念
+//! - 协作式调度 vs 抢占式调度
+//! - 线程状态：`Ready`（就绪）、`Running`（运行中）、`Finished`（已结束）
+//! - `yield_now()`：当前线程主动让出 CPU
+//! - 调度循环：挑出下一个就绪线程并切换过去
 //!
-//! ## Design
-//! Each green thread has its own stack and `TaskContext`. Threads call `yield_now()` to yield.
-//! The scheduler round-robins among ready threads. User entry is wrapped by `thread_wrapper`, which
-//! calls the entry then marks the thread `Finished` and switches back.
+//! ## 设计
+//! 每个绿色线程有自己的栈和 `TaskContext`。线程调用 `yield_now()` 主动让出。
+//! 调度器在就绪线程之间轮转（round-robin）。用户入口被 `thread_wrapper` 包裹：
+//! wrapper 先调用入口函数，然后把线程标记为 `Finished` 并切回。
 
 #![cfg(target_arch = "riscv64")]
 
 use core::arch::naked_asm;
 
-/// Per-thread stack size. Slightly larger to avoid overflow under QEMU / test harness.
+/// 每线程栈大小。稍微调大以避免在 QEMU / 测试环境下栈溢出。
 const STACK_SIZE: usize = 1024 * 128;
 
-/// Task context (riscv64); layout must match `01_stack_coroutine::TaskContext` and the asm below.
+/// 任务上下文（riscv64）；布局必须与 `01_stack_coroutine::TaskContext` 及下面的汇编一致。
 #[repr(C)]
 #[derive(Debug, Default, Clone)]
 pub struct TaskContext {
@@ -52,14 +52,15 @@ struct GreenThread {
     ctx: TaskContext,
     state: ThreadState,
     _stack: Option<Vec<u8>>,
-    /// User entry; taken once when the thread is first scheduled and passed to `thread_wrapper`.
+    /// 用户入口；线程第一次被调度时取走（take），交给 `thread_wrapper` 调用。
     entry: Option<extern "C" fn()>,
 }
 
-/// Set by the scheduler before switching to a new thread; `thread_wrapper` reads and calls it once.
+/// 由调度器在切换到新线程之前设置；`thread_wrapper` 读取它并只调用一次。
 static mut CURRENT_THREAD_ENTRY: Option<extern "C" fn()> = None;
 
-/// Wrapper run as the initial `ra` for each green thread: call the user entry (from `CURRENT_THREAD_ENTRY`), then mark Finished and switch back.
+/// 作为每个绿色线程初始 `ra` 运行的包裹函数：调用用户入口（从 `CURRENT_THREAD_ENTRY` 取），
+/// 然后标记为 Finished 并切回。
 extern "C" fn thread_wrapper() {
     let entry = unsafe { core::ptr::read(&raw const CURRENT_THREAD_ENTRY) };
     if let Some(f) = entry {
@@ -69,10 +70,10 @@ extern "C" fn thread_wrapper() {
     thread_finished();
 }
 
-/// Save current callee-saved regs into `old`, load from `new`, then `ret` to `new.ra`.
-/// Zero `a0`/`a1` before `ret` so we don't leak pointers into the new context.
+/// 把当前被调用者保存寄存器存入 `old`，从 `new` 装载，然后 `ret` 跳向 `new.ra`。
+/// 在 `ret` 前将 `a0`/`a1` 清零，避免把指针泄漏进新上下文。
 ///
-/// Must be `#[unsafe(naked)]` to prevent the compiler from generating a prologue/epilogue.
+/// 必须标注 `#[unsafe(naked)]`，以阻止编译器生成序言/尾声。
 #[unsafe(naked)]
 unsafe extern "C" fn switch_context(_old: &mut TaskContext, _new: &TaskContext) {
     naked_asm!(
@@ -130,26 +131,30 @@ impl Scheduler {
         }
     }
 
-    /// Register a new green thread that will run `entry` when first scheduled.
+    /// 注册一个新的绿色线程，首次被调度时将运行 `entry`。
     ///
-    /// 1. Allocate a stack of `STACK_SIZE` bytes; compute `stack_top` (high address).
-    /// 2. Set up the context: `ra = thread_wrapper` so the first switch jumps to the wrapper;
-    ///    `sp` must be 16-byte aligned (e.g. `(stack_top - 16) & !15` to leave headroom).
-    /// 3. Push a `GreenThread` with this context, state `Ready`, and `entry` stored for the wrapper to call.
+    /// 1. 分配 `STACK_SIZE` 字节的栈；计算 `stack_top`（高地址）。
+    /// 2. 布置上下文：`ra = thread_wrapper`，让第一次切换跳到 wrapper；
+    ///    `sp` 必须 16 字节对齐（例如 `(stack_top - 16) & !15` 留出余量）。
+    /// 3. 压入一个 `GreenThread`：带上此上下文、状态 `Ready`，并把 `entry` 存起来供 wrapper 调用。
     pub fn spawn(&mut self, entry: extern "C" fn()) {
-        todo!("alloc stack, init ctx with ra=thread_wrapper and aligned sp, push GreenThread(Ready, entry)")
-    }
+        // todo!("alloc stack, init ctx with ra=thread_wrapper and aligned sp, push GreenThread(Ready, entry)")
 
-    /// Run the scheduler until all threads (except the main one) are `Finished`.
+    }
+    
+
+    /// 运行调度器，直到除主线程外的所有线程都 `Finished`。
     ///
-    /// 1. Set the global `SCHEDULER` pointer to `self` so that `yield_now` and `thread_finished` can call back.
-    /// 2. Loop: if all threads in `threads[1..]` are `Finished`, break; otherwise call `schedule_next()` (which may switch away and later return).
-    /// 3. Clear `SCHEDULER` when done.
+    /// 1. 把全局 `SCHEDULER` 指针设为 `self`，让 `yield_now` 和 `thread_finished` 能回调。
+    /// 2. 循环：若 `threads[1..]` 全部 `Finished` 则退出；否则调用 `schedule_next()`
+    ///    （它可能切走，之后某刻会切回来）。
+    /// 3. 结束时清空 `SCHEDULER`。
     pub fn run(&mut self) {
         todo!("set SCHEDULER to self, loop until threads[1..] all Finished, call schedule_next, then clear SCHEDULER")
     }
 
-    /// Find the next ready thread (starting from `current + 1` round-robin), mark current as `Ready` (if not `Finished`), mark next as `Running`, set `CURRENT_THREAD_ENTRY` if the next thread has an entry, then switch to it.
+    /// 找出下一个就绪线程（从 `current + 1` 开始轮转），把当前线程标记为 `Ready`（若不是 `Finished`），
+    /// 把下一个标记为 `Running`，若下一个线程有 entry 则设置 `CURRENT_THREAD_ENTRY`，然后切换过去。
     fn schedule_next(&mut self) {
         todo!("round-robin find next Ready, set current Ready (if not Finished), next Running, CURRENT_THREAD_ENTRY, then switch_context")
     }
@@ -166,7 +171,7 @@ impl TaskContext {
 
 static mut SCHEDULER: *mut Scheduler = std::ptr::null_mut();
 
-/// Current thread voluntarily yields; the scheduler will pick the next ready thread.
+/// 当前线程主动让出；调度器会挑下一个就绪线程。
 pub fn yield_now() {
     unsafe {
         if !SCHEDULER.is_null() {
@@ -175,7 +180,7 @@ pub fn yield_now() {
     }
 }
 
-/// Mark current thread as `Finished` and switch to the next (called by `thread_wrapper` after the user entry returns).
+/// 把当前线程标记为 `Finished` 并切换到下一个（由 `thread_wrapper` 在用户入口返回后调用）。
 fn thread_finished() {
     unsafe {
         if !SCHEDULER.is_null() {
@@ -192,7 +197,7 @@ mod tests {
     use std::sync::atomic::{AtomicU32, Ordering};
     use std::sync::Mutex;
 
-    /// Tests must run serially: the scheduler uses global state (SCHEDULER, CURRENT_THREAD_ENTRY).
+    /// 测试必须串行运行：调度器使用全局状态（SCHEDULER、CURRENT_THREAD_ENTRY）。
     static TEST_LOCK: Mutex<()> = Mutex::new(());
 
     static EXEC_ORDER: AtomicU32 = AtomicU32::new(0);
@@ -224,7 +229,7 @@ mod tests {
         let got = EXEC_ORDER.load(Ordering::SeqCst);
         if got != 122 {
             panic!(
-                "EXEC_ORDER: expected 122, got {} (run with --nocapture to see stderr)",
+                "EXEC_ORDER: 期望 122，实际 {}（用 --nocapture 运行可看 stderr）",
                 got
             );
         }
