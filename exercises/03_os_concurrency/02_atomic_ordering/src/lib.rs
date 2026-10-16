@@ -87,10 +87,18 @@ impl OnceCell {
     ///
     /// 提示：用 `compare_exchange` 确保只有一个线程成功。
     pub fn init(&self, val: u32) -> bool {
-        // TODO：用 compare_exchange 确保只初始化一次
-        // 成功时存入值
-        self.value.store(val,Ordering::Relaxed);
-        self.initialized.compare_exchange(false,true,Ordering::AcqRel,Ordering::Acquire).is_ok()
+        // 先抢初始化权：只有赌赢的人才有资格写值
+        // （输家绝不能碰 value 槽位，否则会覆盖赢家的数据）
+        if self
+            .initialized
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+            .is_ok()
+        {
+            self.value.store(val, Ordering::Relaxed);
+            true
+        } else {
+            false
+        }
     }
 
     /// 获取值。已初始化返回 Some，否则返回 None。
