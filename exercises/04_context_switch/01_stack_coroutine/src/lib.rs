@@ -1,22 +1,22 @@
-//! # Stackful Coroutine and Context Switch (riscv64)
+//! # 有栈协程与上下文切换（riscv64）
 //!
-//! In this exercise, you implement the minimal context switch using inline assembly,
-//! which is the core mechanism of OS thread scheduling. This crate is **riscv64 only**;
-//! run `cargo test` on riscv64 Linux, or use the repo's normal flow (`./check.sh` / `oscamp`) on x86 with QEMU.
+//! 在这个练习中，你将用内联汇编实现最小化的上下文切换——这是 OS 线程调度的核心机制。
+//! 本 crate **仅限 riscv64**；在 riscv64 Linux 上跑 `cargo test`，或在 x86 上用仓库的正常流程
+//! （`./check.sh` / `oscamp`，通过 QEMU 模拟）。
 //!
-//! ## Key Concepts
-//! - **Callee-saved registers**: Save and restore them on switch so the switched-away task can resume correctly later.
-//! - **Stack pointer `sp`** and **return address `ra`**: Restore them in the new context; the first time we switch to a task, `ret` jumps to `ra` (the entry point).
-//! - Inline assembly: `core::arch::asm!`
+//! ## 关键概念
+//! - **被调用者保存寄存器（callee-saved）**：切换时保存并恢复它们，被切走的任务之后才能正确续跑。
+//! - **栈指针 `sp`** 和 **返回地址 `ra`**：在新上下文里恢复它们；第一次切换到某个任务时，`ret` 会跳到 `ra`（即入口点）。
+//! - 内联汇编：`core::arch::asm!`
 //!
-//! ## riscv64 ABI (for this exercise)
-//! - Callee-saved: `sp`, `ra`, `s0`–`s11`. The `ret` instruction is `jalr zero, 0(ra)`.
-//! - First and second arguments: `a0` (old context), `a1` (new context).
+//! ## riscv64 ABI（本练习用到的部分）
+//! - 被调用者保存：`sp`、`ra`、`s0`–`s11`。`ret` 指令即 `jalr zero, 0(ra)`。
+//! - 第一个和第二个参数：`a0`（旧上下文）、`a1`（新上下文）。
 
 #![cfg(target_arch = "riscv64")]
 
-/// Saved register state for one task (riscv64). Layout must match the offsets used in the asm below: for one task (riscv64). Layout must match the offsets used in the asm below:
-/// `sp` at 0, `ra` at 8, then `s0`–`s11` at 16, 24, … 104.
+/// 一个任务的保存寄存器状态（riscv64）。内存布局必须与下面汇编使用的偏移一致：
+/// `sp` 在 0，`ra` 在 8，`s0`–`s11` 依次在 16、24、… 104。
 #[repr(C)]
 #[derive(Debug, Default, Clone, Copy)]
 pub struct TaskContext {
@@ -56,31 +56,73 @@ impl TaskContext {
         }
     }
 
-    /// Initialize this context so that when we switch to it, execution starts at `entry`.
+    /// 初始化此上下文：切换过去时，执行从 `entry` 开始。
     ///
-    /// - Set `ra = entry` so that the first `ret` in the new context jumps to `entry`.
-    /// - Set `sp = stack_top` with 16-byte alignment (RISC-V ABI requires 16-byte aligned stack at function entry).
-    /// - Leave `s0`–`s11` zero; they will be loaded on switch.
+    /// - 设 `ra = entry`，让新上下文的第一个 `ret` 跳到 `entry`。
+    /// - 设 `sp = stack_top`，并保持 16 字节对齐（RISC-V ABI 要求函数入口处栈 16 字节对齐）。
+    /// - `s0`–`s11` 留零；切换时会被装载。
     pub fn init(&mut self, stack_top: usize, entry: usize) {
-        todo!("set ra = entry, sp = stack_top (16-byte aligned)")
+        // todo!("set ra = entry, sp = stack_top (16-byte aligned)");
+        self.ra = entry as u64;
+        self.sp = stack_top as u64;
     }
 }
 
-/// Switch from `old` to `new` context: save current callee-saved regs into `old`, load from `new`, then `ret` (jumps to `new.ra`).
+/// 从 `old` 上下文切换到 `new` 上下文：把当前的被调用者保存寄存器存入 `old`，
+/// 从 `new` 装载，然后 `ret`（跳向 `new.ra`）。
 ///
-/// In asm: store `sp`, `ra`, `s0`–`s11` to `[a0]` (old), load from `[a1]` (new), zero `a0`/`a1` so we do not leak pointers into the new context, then `ret`.
+/// 汇编层面：把 `sp`、`ra`、`s0`–`s11` 存到 `[a0]`（old），从 `[a1]`（new）装载，
+/// 将 `a0`/`a1` 清零以免把指针泄漏进新上下文，最后 `ret`。
 ///
-/// Must be `#[unsafe(naked)]` to prevent the compiler from generating a prologue/epilogue.
-pub unsafe fn switch_context(old: &mut TaskContext, new: &TaskContext) {
-    todo!("save callee-saved regs to old, load from new, then ret; use #[unsafe(naked)] + naked_asm!, see module doc for riscv64 ABI and layout")
+/// 必须标注 `#[unsafe(naked)]`，以阻止编译器生成序言/尾声。
+#[unsafe(naked)]
+pub unsafe extern "C" fn switch_context(old: &mut TaskContext, new: &TaskContext) {
+    core::arch::naked_asm!(
+        // ── 存档：CPU 现场 → 旧上下文（a0）──
+        "sd sp, 0(a0)",      // 把 sp 存到第 0 格
+        "sd ra, 8(a0)",      // 把 ra 存到第 1 格
+        "sd s0, 16(a0)",     // 把 s0 存到第 2 格
+        "sd s1, 24(a0)",
+        "sd s2, 32(a0)",
+        "sd s3, 40(a0)",
+        "sd s4, 48(a0)",
+        "sd s5, 56(a0)",
+        "sd s6, 64(a0)",
+        "sd s7, 72(a0)",
+        "sd s8, 80(a0)",
+        "sd s9, 88(a0)",
+        "sd s10, 96(a0)",
+        "sd s11, 104(a0)",   // 14 个格子存完
+        // ── 读档：新上下文（a1）→ CPU ──
+        "ld sp, 0(a1)",      // 从第 0 格读出装进 sp（从此站上新栈）
+        "ld ra, 8(a1)",
+        "ld s0, 16(a1)",
+        "ld s1, 24(a1)",
+        "ld s2, 32(a1)",m
+        "ld s3, 40(a1)",
+        "ld s4, 48(a1)",
+        "ld s5, 56(a1)",
+        "ld s6, 64(a1)",
+        "ld s7, 72(a1)",
+        "ld s8, 80(a1)",
+        "ld s9, 88(a1)",
+        "ld s10, 96(a1)",
+        "ld s11, 104(a1)",   // 14 个格子装完
+        // ── 卫生：清指针，不泄漏进新上下文 ──
+        "li a0, 0",
+        "li a1, 0",
+        "ret",               // 跳向刚装好的 ra
+    );
 }
 
 const STACK_SIZE: usize = 1024 * 64;
 
-/// Allocate a stack for a coroutine. Returns `(buffer, stack_top)` where `stack_top` is the high address
-/// (stack grows down). The buffer must be kept alive for the lifetime of the context using this stack.
+/// 为协程分配一个栈。返回 `(buffer, stack_top)`，其中 `stack_top` 是高地址
+/// （栈向低地址生长）。buffer 必须在使用它的上下文存活期间一直活着。
 pub fn alloc_stack() -> (Vec<u8>, usize) {
-    todo!("allocate stack buffer, return (buffer, stack_top) with stack_top 16-byte aligned")
+    let buf = vec![0u8; STACK_SIZE];
+    let top = buf.as_ptr() as usize + STACK_SIZE;   // 高地址端 = 起点 + 大小
+    (buf, top)
 }
 
 #[cfg(test)]
