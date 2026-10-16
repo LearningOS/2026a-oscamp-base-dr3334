@@ -1,12 +1,12 @@
-//! # Atomic Operations Basics
+//! # 原子操作基础
 //!
-//! In this exercise, you will use atomic types to implement a lock-free thread‑safe counter.
+//! 在这个练习中，你将使用原子类型实现一个无锁的线程安全计数器。
 //!
-//! ## Key Concepts
+//! ## 关键概念
 //! - `std::sync::atomic::AtomicU64`
-//! - `fetch_add`, `fetch_sub`, `load`, `store` operations
-//! - `compare_exchange` lock‑free primitive
-//! - `Ordering` memory ordering
+//! - `fetch_add`、`fetch_sub`、`load`、`store` 操作
+//! - `compare_exchange` 无锁原语
+//! - `Ordering` 内存顺序
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
@@ -21,48 +21,56 @@ impl AtomicCounter {
         }
     }
 
-    /// Atomically increments by 1, returns the value **before** increment.
+    /// 原子地自增 1，返回自增**前**的值。
     ///
-    /// Hint: use `fetch_add` with `Ordering::Relaxed`
+    /// 提示：使用 `fetch_add` 配合 `Ordering::Relaxed`
     pub fn increment(&self) -> u64 {
         // TODO
-        todo!()
+        self.value.fetch_add(1, Ordering::Relaxed)
     }
 
-    /// Atomically decrements by 1, returns the value **before** decrement.
+    /// 原子地自减 1，返回自减**前**的值。
     pub fn decrement(&self) -> u64 {
         // TODO
-        todo!()
+                self.value.fetch_sub(1, Ordering::Relaxed)
+
     }
 
-    /// Gets the current value.
+    /// 获取当前值。
     pub fn get(&self) -> u64 {
         // TODO
-        todo!()
+        self.value.load(Ordering::Relaxed)
     }
 
-    /// Atomic CAS (Compare-And-Swap) operation.
-    /// If current value equals `expected`, set to `new_val` and return Ok(expected).
-    /// Otherwise return Err(actual current value).
+    /// 原子 CAS（Compare-And-Swap，比较并交换）操作。
+    /// 如果当前值等于 `expected`，设置为 `new_val` 并返回 Ok(expected)。
+    /// 否则返回 Err(实际当前值)。
     ///
-    /// Hint: use `compare_exchange` with success ordering `Ordering::AcqRel` and failure ordering `Ordering::Acquire`
+    /// 提示：使用 `compare_exchange`，成功顺序 `Ordering::AcqRel`，失败顺序 `Ordering::Acquire`
     pub fn compare_and_swap(&self, expected: u64, new_val: u64) -> Result<u64, u64> {
         // TODO
-        todo!()
+         self.value.compare_exchange(expected, new_val, Ordering::AcqRel, Ordering::Acquire)
     }
 
-    /// Multiply the value atomically using a CAS loop.
-    /// Returns the value **before** multiplication.
+    /// 用 CAS 循环原子地做乘法。
+    /// 返回乘法**前**的值。
     ///
-    /// Hint: read current value in loop, compute new value, try CAS to update, retry on failure.
+    /// 提示：循环中读取当前值，计算新值，尝试 CAS 更新，失败则重试。
     pub fn fetch_multiply(&self, multiplier: u64) -> u64 {
-        // TODO: CAS loop
+        // TODO: CAS 循环
         // loop {
         //     let current = ...
         //     let new = current * multiplier;
         //     match self.compare_and_swap(current, new) { ... }
         // }
-        todo!()
+        loop{
+            let current=self.get();
+            let new= current* multiplier;
+             match self.compare_and_swap(current, new) {
+          Ok(_) => return current,   // 成功：返回乘法前的值——恰好就是 current
+          Err(_) => continue,        // 失败：值被别人改了，回循环头重新读、重新算
+      }
+        }
     }
 }
 
