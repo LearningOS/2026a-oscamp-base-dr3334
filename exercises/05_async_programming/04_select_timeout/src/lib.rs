@@ -1,40 +1,46 @@
-//! # Select and Timeout
+//! # Select 与 Timeout
 //!
-//! In this exercise, you will use `tokio::select!` macro to implement race selection and timeout control.
+//! 在这个练习中，你将使用 `tokio::select!` 宏实现竞速选择与超时控制。
 //!
-//! ## Concepts
-//! - `tokio::select!` waits for multiple async operations simultaneously
-//! - `tokio::time::timeout` timeout control
-//! - The first completed branch is executed, others are cancelled
+//! ## 概念
+//! - `tokio::select!` 同时等待多个异步操作
+//! - `tokio::time::timeout` 超时控制
+//! - 最先完成的分支被执行，其余分支被取消
 
 use std::future::Future;
 use tokio::time::{sleep, Duration};
 
-/// Async operation with timeout.
-/// If `future` completes within `timeout_ms` milliseconds, returns Some(result).
-/// Otherwise returns None.
+/// 带超时的异步操作。
+/// 若 `future` 在 `timeout_ms` 毫秒内完成，返回 Some(result)；
+/// 否则返回 None。
 ///
-/// Hint: Use `tokio::select!` or `tokio::time::timeout`.
+/// 提示：可以用 `tokio::select!`，也可以用 `tokio::time::timeout`。
 pub async fn with_timeout<F, T>(future: F, timeout_ms: u64) -> Option<T>
 where
     F: Future<Output = T>,
 {
-    // TODO: Use tokio::select! to race between future and sleep
-    // Or use tokio::time::timeout
-    todo!()
+    // TODO：用 tokio::select! 让 future 和 sleep 竞速
+    // 或者用 tokio::time::timeout
+    tokio::select!{
+        result=future =>Some(result),
+        _ = sleep(Duration::from_millis(timeout_ms)) => None,
+    }
 }
 
-/// Race two async tasks, return the result of whichever finishes first.
+/// 两个异步任务竞速，返回先完成者的结果。
 ///
-/// Hint: Use `tokio::select!` macro.
+/// 提示：用 `tokio::select!` 宏。
 pub async fn race<F1, F2, T>(f1: F1, f2: F2) -> T
 where
     F1: Future<Output = T>,
     F2: Future<Output = T>,
 {
-    // TODO: Use tokio::select! to wait for f1 and f2
-    // Return the result of whichever completes first
-    todo!()
+    // TODO：用 tokio::select! 同时等待 f1 和 f2
+    // 返回先完成者的结果
+   tokio::select! {
+        result = f1 => result,
+        result = f2 => result,
+    }
 }
 
 #[cfg(test)]

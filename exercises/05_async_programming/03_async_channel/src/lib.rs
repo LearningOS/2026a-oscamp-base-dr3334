@@ -1,37 +1,67 @@
-//! # Async Channel
+//! # 异步通道
 //!
-//! In this exercise, you will use `tokio::sync::mpsc` async channels to implement producer-consumer pattern.
+//! 在这个练习中，你将使用 `tokio::sync::mpsc` 异步通道实现生产者-消费者模式。
 //!
-//! ## Concepts
-//! - `tokio::sync::mpsc::channel` creates bounded async channels
-//! - Async `send` and `recv`
-//! - Channel closing mechanism (receiver returns None after all senders are dropped)
+//! ## 概念
+//! - `tokio::sync::mpsc::channel` 创建有界异步通道
+//! - 异步的 `send` 与 `recv`
+//! - 通道关闭机制（所有 sender 被 drop 后，接收端 recv 返回 None）
 
 use tokio::sync::mpsc;
 
-/// Async producer-consumer:
-/// - Create a producer task that sends each element from items sequentially
-/// - Create a consumer task that receives all elements and collects them into Vec for return
+/// 异步生产者-消费者：
+/// - 创建一个生产者任务，依次发送 items 中的每个元素
+/// - 创建一个消费者任务，接收所有元素并收集进 Vec 返回
 ///
-/// Hint: Set channel capacity to items.len().max(1)
+/// 提示：通道容量设为 items.len().max(1)
 pub async fn producer_consumer(items: Vec<String>) -> Vec<String> {
-    // TODO: Create channel with mpsc::channel
-    // TODO: Spawn producer task: iterate through items, send each one
-    // TODO: Spawn consumer task: loop recv until channel closes, collect results
-    // TODO: Wait for consumer to complete and return results
-    todo!()
+    // TODO：用 mpsc::channel 创建通道
+    // TODO：spawn 生产者任务：遍历 items，逐个发送
+    // TODO：spawn 消费者任务：循环 recv 直到通道关闭，收集结果
+    // TODO：等待消费者完成并返回结果
+    
+    let (tx,rx )=mpsc::channel(items.len().max(1));
+
+    let producer=tokio::spawn(async move{
+        for item in items{
+            tx.send(item).await.unwrap();
+        }
+    });
+
+    let consumer= tokio::spawn(async move{
+        let mut results=vec![];
+        while let Some(msg)=rx.recv().await{
+            results.push(msg);
+        }
+        results
+    });
+    consumer.await.unwrap()
 }
 
-/// Fan‑in pattern: multiple producers, one consumer.
-/// Create `n_producers` producers, each sending `"producer {id}: message"`.
-/// Consumer collects all messages, sorts them, and returns.
+/// 汇聚（fan-in）模式：多个生产者，一个消费者。
+/// 创建 `n_producers` 个生产者，每个发送 `"producer {id}: message"`。
+/// 消费者收集所有消息，排序后返回。
 pub async fn fan_in(n_producers: usize) -> Vec<String> {
-    // TODO: Create mpsc channel
-    // TODO: Spawn n_producers producer tasks
-    //       Each sends format!("producer {id}: message")
-    // TODO: Drop the original sender (important! otherwise channel won't close)
-    // TODO: Consumer loops receiving, collects and sorts
-    todo!()
+    // TODO：创建 mpsc 通道
+    // TODO：spawn n_producers 个生产者任务
+    //       每个发送 format!("producer {id}: message")
+    // TODO：drop 掉原始的 sender（重要！否则通道永远不会关闭）
+    // TODO：消费者循环接收，收集并排序
+    let (tx, mut rx) = mpsc::channel(100);
+    for id in 0..n_producers {
+          let tx = tx.clone();                 // ① 每个 producer 拿一个克隆
+          tokio::spawn(async move {
+              tx.send(format!("producer {id}: message")).await.unwrap();
+          });      
+        }
+    drop(tx);                              
+
+      let mut results = Vec::new();
+      while let Some(msg) = rx.recv().await {   // ③ 收到 None（全 drop 了）才退出
+          results.push(msg);
+      }
+      results.sort();
+      results
 }
 
 #[cfg(test)]
