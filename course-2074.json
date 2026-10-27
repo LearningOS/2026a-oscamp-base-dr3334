@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2074,
   "repository": "LearningOS/2026a-oscamp-base-dr3334",
-  "commit": "dfa238b058fb92fe18fc77bd28a17c8af3e65cef",
-  "score": 60,
+  "commit": "468adc82eaa9b7f86a82f7251c65a1136bbe4533",
+  "score": 70,
   "totalScore": 100,
   "exercises": [
     {
@@ -114,9 +114,9 @@
     {
       "name": "green_threads",
       "max": 6,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 101
+      "score": 6,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "basic_future",
@@ -142,9 +142,9 @@
     {
       "name": "select_timeout",
       "max": 4,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 101
+      "score": 4,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "pte_flags",
@@ -176,9 +176,9 @@
     }
   ],
   "student": "dr3334",
-  "runId": "38882306034",
+  "runId": "40458664906",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
