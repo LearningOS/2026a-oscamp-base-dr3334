@@ -178,7 +178,7 @@ impl Sv39PageTable {
       ];
       let mut cur=self.root_ppn;
       for level in (0..=2).rev(){
-        let node=self.nodes.get_mut(&cur).unwrap();
+        let node=self.nodes.get(&cur).unwrap();
         let pte=node.entries[vpns[level]];
 
         if pte&PTE_V==0{
@@ -189,7 +189,7 @@ impl Sv39PageTable {
               let offset = va & 0xFFF;
               return TranslateResult::Ok((ppn << 12) | offset);
           }
-          ur_ppn = pte >> 10;
+          cur = pte >> 10;
       }
       TranslateResult::PageFault
     }
