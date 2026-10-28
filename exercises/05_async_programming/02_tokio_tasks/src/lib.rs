@@ -19,7 +19,7 @@ pub async fn concurrent_squares(n: usize) -> Vec<usize> {
     // TODO：逐个 await 拿到结果
     let mut handles = Vec::new();
     for i in 0..n{
-        handles.push(tokio::spawn(async{i*i}));
+        handles.push(tokio::spawn(async move { i * i }));
     }
      let mut results = Vec::new();
       for h in handles {
