@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2074,
   "repository": "LearningOS/2026a-oscamp-base-dr3334",
-  "commit": "cfa8c7c1ae94a0f828bd2046afe8b51c2543ca42",
-  "score": 80,
+  "commit": "0b82578c3d8fa07d199c12b27aac61e0f9fa118d",
+  "score": 93,
   "totalScore": 100,
   "exercises": [
     {
@@ -107,9 +107,9 @@
     {
       "name": "stack_coroutine",
       "max": 6,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 101
+      "score": 6,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "green_threads",
@@ -121,9 +121,9 @@
     {
       "name": "basic_future",
       "max": 4,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 101
+      "score": 4,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "tokio_tasks",
@@ -135,9 +135,9 @@
     {
       "name": "async_channel_ex",
       "max": 3,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 101
+      "score": 3,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "select_timeout",
@@ -176,9 +176,9 @@
     }
   ],
   "student": "dr3334",
-  "runId": "40608871120",
+  "runId": "40609758017",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
