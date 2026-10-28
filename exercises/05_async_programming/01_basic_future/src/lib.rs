@@ -33,13 +33,13 @@ impl Future for CountDown {
     type Output = &'static str;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let c=self.get_mut();
-        match count{
-            0 => Poll::Ready("liftoff"),
+        let c = self.get_mut();
+        match c.count {
+            0 => Poll::Ready("liftoff!"),
             _ => {
-                c.count-=1;
-                cx.wake_by_ref();
-                poll::Pending
+                c.count -= 1;
+                cx.waker().wake_by_ref();
+                Poll::Pending
             }
         }
     }

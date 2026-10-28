@@ -98,7 +98,7 @@ pub unsafe extern "C" fn switch_context(old: &mut TaskContext, new: &TaskContext
         "ld ra, 8(a1)",
         "ld s0, 16(a1)",
         "ld s1, 24(a1)",
-        "ld s2, 32(a1)",m
+        "ld s2, 32(a1)",
         "ld s3, 40(a1)",
         "ld s4, 48(a1)",
         "ld s5, 56(a1)",

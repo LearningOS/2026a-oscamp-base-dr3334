@@ -20,7 +20,7 @@ pub async fn producer_consumer(items: Vec<String>) -> Vec<String> {
     // TODO：spawn 消费者任务：循环 recv 直到通道关闭，收集结果
     // TODO：等待消费者完成并返回结果
     
-    let (tx,rx )=mpsc::channel(items.len().max(1));
+    let (tx, mut rx) = mpsc::channel(items.len().max(1));
 
     let producer=tokio::spawn(async move{
         for item in items{
