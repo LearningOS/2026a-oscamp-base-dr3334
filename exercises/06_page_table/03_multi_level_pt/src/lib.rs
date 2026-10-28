@@ -185,8 +185,10 @@ impl Sv39PageTable {
             return TranslateResult::PageFault;
         }
          if pte & (PTE_R | PTE_W | PTE_X) != 0 {
-              let ppn = pte >> 10;
-              let offset = va & 0xFFF;
+            let ppn = pte >> 10;
+            let offset_bits = 12 + level * 9;
+            let offset_mask = (1u64 << offset_bits) - 1;
+            let offset = va & offset_mask;
               return TranslateResult::Ok((ppn << 12) | offset);
           }
           cur = pte >> 10;
